@@ -1,0 +1,153 @@
+blueprint:
+  name: Room heating Automation
+  description: Automate the heating in a room based on a presence sensor and a boolean if someone is at home at all.
+
+input:
+  # Input for trigger time in 24-hour format (e.g., "09:00:00")
+  day_time_start_time:
+    name: Day time start time.
+    description: When the day starts and a normal heating temperature should be used when occupancy is detected.
+    selector:
+      time:
+  # Input for trigger time in 24-hour format (e.g., "22:00:00")
+  night_time_start_time:
+    name: Night time start time.
+    description: When the night starts and a night/colder heating temperature should be used.
+    selector:
+      time:
+  # Input for someone at home sensor
+  someone_at_home_sensor:
+    name: Someone at home sensor
+    description: A sensor indicating if someone is at home
+    selector:
+      entity:
+        domain: binary_sensor
+  # Input for occupancy sensor
+  occupancy_sensor:
+    name: Occupancy Sensor
+    description: Binary sensor for bedroom back occupancy.
+    selector:
+      entity:
+        domain: binary_sensor
+  # Input for climate entity
+  climate_entity:
+    name: Climate Entity
+    description: Climate entity to control.
+    selector:
+      entity:
+        domain: climate
+  # Input for temperature when someone is in the room
+  temperature_occupied:
+    name: Temperature When Someone is in the room.
+    description: Temperature setting when someone is detected in the room.
+    selector:
+      number:
+        min: 0
+        max: 30
+        unit_of_measurement: "°C"
+  # Input for temperature when no one is in the room
+  temperature_away:
+    name: Temperature When No One Is in the room
+    description: Temperature setting when no one is detected in the room.
+    selector:
+      number:
+        min: 0
+        max: 30
+        unit_of_measurement: "°C"
+
+trigger:
+  - platform: time
+    at: "{{ day_time_start_time }}"
+  - platform: time
+    at: "{{ night_time_start_time }}"
+  - platform: state
+    entity_id: "{{ occupancy_sensor }}"
+    to: "on"
+    for:
+      hours: 0
+      minutes: 5
+      seconds: 0
+  - platform: state
+    entity_id: "{{ occupancy_sensor }}"
+    to: "off"
+    for:
+      hours: 0
+      minutes: 5
+      seconds: 0
+
+condition: []
+
+action:
+  - choose:
+      - conditions:
+          - condition: state
+            entity_id: "{{ someone_at_home_sensor }}"
+            state: "off"
+        sequence:
+          - service: climate.set_hvac_mode
+            target:
+              entity_id: "{{ climate_entity }}"
+            data:
+              hvac_mode: "off"
+      - conditions:
+          - condition: state
+            entity_id: "{{ someone_at_home_sensor }}"
+            state: "on"
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: time
+                    after: "{{ day_time_start_time }}"
+                    before: "{{ night_time_start_time }}"
+                  - condition: state
+                    entity_id: "{{ occupancy_sensor }}"
+                    state: "on"
+                sequence:
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: "{{ climate_entity }}"
+                    data:
+                      temperature: "{{ temperature_occupied }}"
+                      hvac_mode: auto
+              - conditions:
+                  - condition: time
+                    after: "{{ day_time_start_time }}"
+                    before: "{{ night_time_start_time }}"
+                  - condition: state
+                    entity_id: "{{ occupancy_sensor }}"
+                    state: "off"
+                sequence:
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: "{{ climate_entity }}"
+                    data:
+                      temperature: "{{ temperature_away }}"
+                      hvac_mode: auto
+              - conditions:
+                  - condition: time
+                    after: "{{ night_time_start_time }}"
+                    before: "{{ day_time_start_time }}"
+                  - condition: state
+                    entity_id: "{{ occupancy_sensor }}"
+                    state: "on"
+                sequence:
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: "{{ climate_entity }}"
+                    data:
+                      temperature: "{{ temperature_occupied }}"
+                      hvac_mode: auto
+              - conditions:
+                  - condition: time
+                    after: "{{ night_time_start_time }}"
+                    before: "{{ day_time_start_time }}"
+                  - condition: state
+                    entity_id: "{{ occupancy_sensor }}"
+                    state: "off"
+                sequence:
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: "{{ climate_entity }}"
+                    data:
+                      temperature: "{{ temperature_away }}"
+                      hvac_mode: auto
