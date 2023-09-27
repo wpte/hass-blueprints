@@ -52,18 +52,18 @@ blueprint:
           unit_of_measurement: "°C"
 trigger:
   - platform: time
-    at: "{{ day_time_start_time }}"
+    at: !input day_time_start_time
   - platform: time
-    at: "{{ night_time_start_time }}"
+    at: !input night_time_start_time
   - platform: state
-    entity_id: "{{ occupancy_sensor }}"
+    entity_id: !input occupancy_sensor
     to: "on"
     for:
       hours: 0
       minutes: 5
       seconds: 0
   - platform: state
-    entity_id: "{{ occupancy_sensor }}"
+    entity_id: !input occupancy_sensor
     to: "off"
     for:
       hours: 0
@@ -76,63 +76,63 @@ action:
   - choose:
     - conditions:
         - condition: state
-          entity_id: "{{ climate_entity }}"
+          entity_id: !input climate_entity
           state: "off"
       sequence:
         - stop: "Climate is set as off, don't adjust it"
     - conditions:
         - condition: time
-          after: "{{ day_time_start_time }}"
-          before: "{{ night_time_start_time }}"
+          after: !input day_time_start_time
+          before: !input night_time_start_time
         - condition: state
-          entity_id: "{{ occupancy_sensor }}"
+          entity_id: !input occupancy_sensor
           state: "on"
       sequence:
         - service: climate.set_temperature
           target:
-            entity_id: "{{ climate_entity }}"
+            entity_id: !input climate_entity
           data:
-            temperature: "{{ temperature_occupied }}"
+            temperature: !input temperature_occupied
             hvac_mode: auto
     - conditions:
         - condition: time
-          after: "{{ day_time_start_time }}"
-          before: "{{ night_time_start_time }}"
+          after: !input day_time_start_time
+          before: !input night_time_start_time
         - condition: state
-          entity_id: "{{ occupancy_sensor }}"
+          entity_id: !input occupancy_sensor
           state: "off"
       sequence:
         - service: climate.set_temperature
           target:
-            entity_id: "{{ climate_entity }}"
+            entity_id: !input climate_entity
           data:
-            temperature: "{{ temperature_away }}"
+            temperature: !input temperature_away
             hvac_mode: auto
     - conditions:
         - condition: time
-          after: "{{ night_time_start_time }}"
-          before: "{{ day_time_start_time }}"
+          after: !input night_time_start_time
+          before: !input day_time_start_time
         - condition: state
-          entity_id: "{{ occupancy_sensor }}"
+          entity_id: !input occupancy_sensor
           state: "on"
       sequence:
         - service: climate.set_temperature
           target:
-            entity_id: "{{ climate_entity }}"
+            entity_id: !input climate_entity
           data:
-            temperature: "{{ temperature_occupied }}"
+            temperature: !input temperature_occupied
             hvac_mode: auto
     - conditions:
         - condition: time
-          after: "{{ night_time_start_time }}"
-          before: "{{ day_time_start_time }}"
+          after: !input night_time_start_time
+          before: !input day_time_start_time
         - condition: state
-          entity_id: "{{ occupancy_sensor }}"
+          entity_id: !input occupancy_sensor
           state: "off"
       sequence:
         - service: climate.set_temperature
           target:
-            entity_id: "{{ climate_entity }}"
+            entity_id: !input climate_entity
           data:
-            temperature: "{{ temperature_away }}"
+            temperature: !input temperature_away
             hvac_mode: auto
