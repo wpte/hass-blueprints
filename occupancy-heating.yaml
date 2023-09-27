@@ -22,7 +22,7 @@ blueprint:
       description: A sensor indicating if someone is at home
       selector:
         entity:
-          domain: binary_input
+          domain: input_boolean
     # Input for occupancy sensor
     occupancy_sensor:
       name: Occupancy Sensor
