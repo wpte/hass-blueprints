@@ -1,6 +1,7 @@
 blueprint:
   name: Room heating Automation
   description: Automate the heating in a room based on a presence sensor and a boolean if someone is at home at all.
+  domain: automation
 
 input:
   # Input for trigger time in 24-hour format (e.g., "09:00:00")
