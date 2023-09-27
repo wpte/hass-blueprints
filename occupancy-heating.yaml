@@ -32,6 +32,26 @@ blueprint:
       selector:
         entity:
           domain: binary_sensor
+    # Minutes before a room is considered occupied
+    time_occupied:
+      name: Minutes before a room is considered occupied.
+      description: The amount of minutes the occupancy sensor needs to be in occupied state before the room is considered to be occupied.
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 15
+          unit_of_measurement: "Minutes"
+    # Minutes before a room is considered unoccupied
+    time_unoccupied:
+      name: Minutes before a room is considered unoccupied.
+      description: The amount of minutes the occupancy sensor needs to be in unoccupied state before the room is considered to be unoccupied.
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 15
+          unit_of_measurement: "Minutes"
     # Input for climate entity
     climate_entity:
       name: Climate Entity
@@ -59,6 +79,8 @@ blueprint:
           min: 5
           max: 25
           unit_of_measurement: "°C"
+
+
 trigger:
   - platform: time
     at: !input day_time_start_time
@@ -69,15 +91,17 @@ trigger:
     to: "on"
     for:
       hours: 0
-      minutes: 5
+      minutes: !input time_occupied
       seconds: 0
   - platform: state
     entity_id: !input occupancy_sensor
     to: "off"
     for:
       hours: 0
-      minutes: 5
+      minutes: !input time_unoccupied
       seconds: 0
+  - platform: state
+    entity_id: !input someone_at_home_boolean
 
 condition: []
 
