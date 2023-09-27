@@ -69,6 +69,16 @@ blueprint:
           min: 5
           max: 25
           unit_of_measurement: "°C"
+    # Temperature at night when the room is occupied
+    temperature_at_occupied_night:
+      name: Temperature when someone is in the room at night
+      description: The temperature at night when the room is occupied.
+      default: 19
+      selector:
+        number:
+          min: 5
+          max: 25
+          unit_of_measurement: "°C"
     # Input for temperature when no one is in the room
     temperature_away:
       name: Temperature When No One Is in the room
@@ -79,7 +89,6 @@ blueprint:
           min: 5
           max: 25
           unit_of_measurement: "°C"
-
 
 trigger:
   - platform: time
@@ -157,7 +166,7 @@ action:
           target:
             entity_id: !input climate_entity
           data:
-            temperature: !input temperature_occupied
+            temperature: !input temperature_at_occupied_night
             hvac_mode: auto
     - conditions:
         - condition: time
