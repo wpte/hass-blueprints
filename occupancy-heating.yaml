@@ -8,14 +8,23 @@ blueprint:
     day_time_start_time:
       name: Day time start time.
       description: When the day starts and a normal heating temperature should be used when occupancy is detected.
+      default: "09:00:00"
       selector:
         time:
     # Input for trigger time in 24-hour format (e.g., "22:00:00")
     night_time_start_time:
       name: Night time start time.
       description: When the night starts and a night/colder heating temperature should be used.
+      default: "22:00:00"
       selector:
         time:
+    # Input for someone at home boolean
+    someone_at_home_boolean:
+      name: Someone at home boolean helper
+      description: A helper boolean to indicate if someone is at home
+      selector:
+        entity:
+          domain: input_boolean
     # Input for occupancy sensor
     occupancy_sensor:
       name: Occupancy Sensor
@@ -37,8 +46,8 @@ blueprint:
       default: 21
       selector:
         number:
-          min: 0
-          max: 30
+          min: 5
+          max: 25
           unit_of_measurement: "°C"
     # Input for temperature when no one is in the room
     temperature_away:
@@ -47,8 +56,8 @@ blueprint:
       default: 16
       selector:
         number:
-          min: 0
-          max: 30
+          min: 5
+          max: 25
           unit_of_measurement: "°C"
 trigger:
   - platform: time
@@ -76,10 +85,14 @@ action:
   - choose:
     - conditions:
         - condition: state
-          entity_id: !input climate_entity
+          entity_id: !input someone_at_home_boolean
           state: "off"
       sequence:
-        - stop: "Climate is set as off, don't adjust it"
+        - service: climate.set_temperature
+          target:
+            entity_id: !input climate_entity
+          data:
+            hvac_mode: off
     - conditions:
         - condition: time
           after: !input day_time_start_time
