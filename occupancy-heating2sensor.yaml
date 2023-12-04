@@ -1,0 +1,259 @@
+blueprint:
+  name: Occupancy heating
+  description: Automate the heating in a room based on a presence sensor and a boolean if someone is at home at all.
+  domain: automation
+
+  input:
+    # Input for trigger time in 24-hour format (e.g., "09:00:00")
+    day_time_start_time:
+      name: Day time start time.
+      description: When the day starts and a normal heating temperature should be used when occupancy is detected.
+      default: "09:00:00"
+      selector:
+        time:
+    # Input for trigger time in 24-hour format (e.g., "22:00:00")
+    night_time_start_time:
+      name: Night time start time.
+      description: When the night starts and a night/colder heating temperature should be used.
+      default: "22:00:00"
+      selector:
+        time:
+    # Input for someone at home boolean
+    someone_at_home_boolean:
+      name: Someone at home boolean helper
+      description: A helper boolean to indicate if someone is at home
+      selector:
+        entity:
+          domain: input_boolean
+    # Input for occupancy sensor
+    occupancy_sensor1:
+      name: Occupancy Sensor 1
+      description: Binary sensor for occupancy.
+      selector:
+        entity:
+          domain: binary_sensor
+    occupancy_sensor2:
+      name: Occupancy Sensor 2
+      description: Binary sensor for occupancy.
+      selector:
+        entity:
+          domain: binary_sensor
+    # Minutes before a room is considered occupied
+    time_occupied:
+      name: Minutes before a room is considered occupied.
+      description: The amount of minutes the occupancy sensor needs to be in occupied state before the room is considered to be occupied.
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 15
+          unit_of_measurement: "Minutes"
+    # Minutes before a room is considered unoccupied
+    time_unoccupied:
+      name: Minutes before a room is considered unoccupied.
+      description: The amount of minutes the occupancy sensor needs to be in unoccupied state before the room is considered to be unoccupied.
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 15
+          unit_of_measurement: "Minutes"
+    # Input for climate entity
+    climate_entity1:
+      name: Climate Entity 1
+      description: Climate entity to control.
+      selector:
+        entity:
+          domain: climate
+    climate_entity2:
+      name: Climate Entity 2
+      description: Climate entity to control.
+      selector:
+        entity:
+          domain: climate
+    # Input for temperature when someone is in the room
+    temperature_occupied:
+      name: Temperature When Someone is in the room.
+      description: Temperature setting when someone is detected in the room.
+      default: 21
+      selector:
+        number:
+          min: 5
+          max: 25
+          unit_of_measurement: "°C"
+    # Temperature at night when the room is occupied
+    temperature_at_occupied_night:
+      name: Temperature when someone is in the room at night
+      description: The temperature at night when the room is occupied.
+      default: 19
+      selector:
+        number:
+          min: 5
+          max: 25
+          unit_of_measurement: "°C"
+    # Input for temperature when no one is in the room
+    temperature_away:
+      name: Temperature When No One Is in the room
+      description: Temperature setting when no one is detected in the room.
+      default: 16
+      selector:
+        number:
+          min: 5
+          max: 25
+          unit_of_measurement: "°C"
+
+trigger:
+  - platform: time
+    at: !input day_time_start_time
+  - platform: time
+    at: !input night_time_start_time
+  - platform: state
+    entity_id: !input occupancy_sensor1
+    to: "on"
+    for:
+      hours: 0
+      minutes: !input time_occupied
+      seconds: 0
+  - platform: state
+    entity_id: !input occupancy_sensor1
+    to: "off"
+    for:
+      hours: 0
+      minutes: !input time_unoccupied
+      seconds: 0
+  - platform: state
+    entity_id: !input occupancy_sensor2
+    to: "on"
+    for:
+      hours: 0
+      minutes: !input time_occupied
+      seconds: 0
+  - platform: state
+    entity_id: !input occupancy_sensor2
+    to: "off"
+    for:
+      hours: 0
+      minutes: !input time_unoccupied
+      seconds: 0
+  - platform: state
+    entity_id: !input someone_at_home_boolean
+
+condition: []
+
+action:
+  - choose:
+    - conditions:
+        - condition: state
+          entity_id: !input someone_at_home_boolean
+          state: "off"
+      sequence:
+        - service: climate.set_temperature
+          target:
+            entity_id: !input climate_entity1
+          data:
+            hvac_mode: off
+        - service: climate.set_temperature
+          target:
+            entity_id: !input climate_entity2
+          data:
+            hvac_mode: off
+    - conditions:
+        - condition: time
+          after: !input day_time_start_time
+          before: !input night_time_start_time
+        - condition: or
+          conditions:
+          - condition: state
+            entity_id: !input occupancy_sensor1
+            state: "on"
+          - condition: state
+            entity_id: !input occupancy_sensor2
+            state: "on"
+      sequence:
+        - service: climate.set_temperature
+          target:
+            entity_id: !input climate_entity1
+          data:
+            temperature: !input temperature_occupied
+            hvac_mode: auto
+        - service: climate.set_temperature
+          target:
+            entity_id: !input climate_entity2
+          data:
+            temperature: !input temperature_occupied
+            hvac_mode: auto
+    - conditions:
+        - condition: time
+          after: !input day_time_start_time
+          before: !input night_time_start_time
+        - condition: and
+          conditions:
+          - condition: state
+            entity_id: !input occupancy_sensor1
+            state: "off"
+          - condition: state
+            entity_id: !input occupancy_sensor2
+            state: "off"
+      sequence:
+        - service: climate.set_temperature
+          target:
+            entity_id: !input climate_entity1
+          data:
+            temperature: !input temperature_away
+            hvac_mode: auto
+        - service: climate.set_temperature
+          target:
+            entity_id: !input climate_entity2
+          data:
+            temperature: !input temperature_away
+            hvac_mode: auto
+    - conditions:
+        - condition: time
+          after: !input night_time_start_time
+          before: !input day_time_start_time
+        - condition: or
+          conditions:
+          - condition: state
+            entity_id: !input occupancy_sensor1
+            state: "on"
+          - condition: state
+            entity_id: !input occupancy_sensor2
+            state: "on"
+      sequence:
+        - service: climate.set_temperature
+          target:
+            entity_id: !input climate_entity1
+          data:
+            temperature: !input temperature_at_occupied_night
+            hvac_mode: auto
+        - service: climate.set_temperature
+          target:
+            entity_id: !input climate_entity2
+          data:
+            temperature: !input temperature_at_occupied_night
+            hvac_mode: auto
+    - conditions:
+        - condition: time
+          after: !input night_time_start_time
+          before: !input day_time_start_time
+        - condition: and
+          conditions:
+          - condition: state
+            entity_id: !input occupancy_sensor1
+            state: "off"
+          - condition: state
+            entity_id: !input occupancy_sensor2
+            state: "off"
+      sequence:
+        - service: climate.set_temperature
+          target:
+            entity_id: !input climate_entity1
+          data:
+            temperature: !input temperature_away
+            hvac_mode: auto
+        - service: climate.set_temperature
+          target:
+            entity_id: !input climate_entity2
+          data:
+            temperature: !input temperature_away
+            hvac_mode: auto
